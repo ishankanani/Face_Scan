@@ -1,0 +1,9 @@
+<h2>Clustered Faces</h2>
+{% for cluster_id, images in clusters.items %}
+  <h3>Cluster {{ cluster_id }}</h3>
+  <div style="display: flex; flex-wrap: wrap;">
+    {% for img in images %}
+      <img src="{{ img.image.url }}" style="width: 120px; margin: 8px;">
+    {% endfor %}
+  </div>
+{% endfor %}

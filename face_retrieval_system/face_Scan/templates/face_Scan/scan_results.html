@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results</title>
+    <style>
+        .preview-img {
+            width: 200px;
+            margin: 10px;
+            cursor: zoom-in;
+            transition: transform 0.2s;
+        }
+
+        .preview-img:hover {
+            transform: scale(1.05);
+        }
+
+        #imageModal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #imageModal img {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 8px;
+            box-shadow: 0 0 20px #000;
+        }
+
+        #imageModal .controls {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .control-btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-btn { background: red; }
+        .download-btn { background: green; text-decoration: none; line-height: 32px; }
+    </style>
+</head>
+<body>
+    <h2>Matched Faces:</h2>
+
+    {% if matches %}
+        {% for img in matches %}
+            <img src="{{ img.image.url }}" alt="Matched" class="preview-img"
+                 onclick="showModal('{{ img.image.url }}')">
+        {% endfor %}
+    {% else %}
+        <p>No matching faces found.</p>
+    {% endif %}
+
+    <br><br>
+    <a href="{% url 'start_scan' %}">
+        <button style="padding:10px;">Scan Another Face</button>
+    </a>
+
+    <!-- Modal for image preview -->
+    <div id="imageModal">
+        <img id="modalImage" src="" alt="Large Preview">
+        <div class="controls">
+            <a id="downloadBtn" href="#" download class="control-btn download-btn">Download</a>
+            <button onclick="closeModal()" class="control-btn close-btn">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function showModal(imgUrl) {
+            document.getElementById("modalImage").src = imgUrl;
+            document.getElementById("downloadBtn").href = imgUrl;
+            document.getElementById("imageModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("imageModal").style.display = "none";
+        }
+    </script>
+</body>
+</html>

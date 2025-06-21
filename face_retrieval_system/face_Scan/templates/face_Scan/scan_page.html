@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Scan</title>
+    <style>
+        video, canvas, img {
+            width: 300px;
+            height: 300px;
+            border: 2px solid black;
+            margin: 10px;
+        }
+        #camera-section, #upload-section {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>Scan Your Face</h2>
+
+    <button onclick="showCamera()">📸 Capture Image</button>
+    <button onclick="showUpload()">📁 Upload Image</button>
+
+    <!-- 📸 Capture Section -->
+    <div id="camera-section">
+        <video id="camera" autoplay></video>
+        <br>
+        <button onclick="switchCamera()">Switch Camera</button>
+        <button onclick="capture()">Capture</button>
+        <form id="uploadForm" method="POST" action="{% url 'process_scan' %}">
+            {% csrf_token %}
+            <input type="hidden" name="image_data" id="image_data">
+        </form>
+        <canvas id="canvas" style="display: none;"></canvas>
+    </div>
+
+    <!-- 📁 Upload Section -->
+    <div id="upload-section">
+        <form method="POST" action="{% url 'process_scan' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="file" name="upload_image" accept="image/*" required>
+            <br><br>
+            <button type="submit">Upload and Scan</button>
+        </form>
+    </div>
+
+    <script>
+        let video = document.getElementById('camera');
+        let canvas = document.getElementById('canvas');
+        let image_data = document.getElementById('image_data');
+        let currentFacingMode = 'user';
+
+        function showCamera() {
+            document.getElementById('camera-section').style.display = 'block';
+            document.getElementById('upload-section').style.display = 'none';
+            startCamera();
+        }
+
+        function showUpload() {
+            document.getElementById('camera-section').style.display = 'none';
+            document.getElementById('upload-section').style.display = 'block';
+        }
+
+        async function startCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentFacingMode },
+                audio: false
+            });
+            video.srcObject = stream;
+        }
+
+        function switchCamera() {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            startCamera();
+        }
+
+        function capture() {
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg');
+            image_data.value = dataURL;
+            document.getElementById('uploadForm').submit();
+        }
+    </script>
+</body>
+</html>

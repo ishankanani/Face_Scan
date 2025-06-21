@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Face Images</title>
+    <style>
+        :root {
+            --bg-color: #f7f7f7;
+            --text-color: #333;
+            --accent-color: #4CAF50;
+            --card-bg: #fff;
+            --delete-color: #e53935;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #121212;
+                --text-color: #e0e0e0;
+                --accent-color: #81C784;
+                --card-bg: #1f1f1f;
+                --delete-color: #ef5350;
+            }
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1em;
+        }
+
+        form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .img-block {
+            position: relative;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .img-block img {
+            width: 100%;
+            display: block;
+            border-radius: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .img-block:hover img {
+            transform: scale(1.05);
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--delete-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 4px 10px;
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 250px;
+            height: 20px;
+            background-color: #ccc;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            transition: width 0.2s ease-in-out;
+        }
+
+        .spinner {
+            display: none;
+            margin: 10px auto;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--accent-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 12px;
+        }
+
+        .modal .controls {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+        }
+
+        .modal .controls a,
+        .modal .controls button {
+            background: var(--accent-color);
+            color: white;
+            padding: 8px 14px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+    </style>
+</head>
+<body>
+
+<h1>Upload Face Images</h1>
+
+<form method="POST" enctype="multipart/form-data" id="uploadForm">
+    {% csrf_token %}
+    <input type="file" name="images" multiple required>
+    <button type="submit">Upload</button>
+    <a href="{% url 'start_scan' %}" style="margin-left: 10px;">
+        <button type="button" style="background-color: var(--accent-color); color: white; padding: 8px 16px; border: none; cursor: pointer;">
+            Scan Face
+        </button>
+    </a>
+    <div class="spinner" id="spinner"></div>
+</form>
+
+{% if images %}
+    <form action="{% url 'delete-all-images' %}" method="POST" onsubmit="return confirm('Delete all images?');" style="text-align: center;">
+        {% csrf_token %}
+        <button type="submit" style="background-color: var(--delete-color); color: white; padding: 10px;">Delete All</button>
+    </form>
+
+    <div class="gallery" id="gallery">
+        {% include 'image_upload/image_list_partial.html' %}
+    </div>
+
+    {% if images.has_next %}
+    <div style="text-align:center; margin-top: 20px;">
+        <button id="loadMoreBtn">Load More</button>
+    </div>
+    {% endif %}
+
+{% else %}
+    <p style="text-align:center;">No images uploaded yet.</p>
+{% endif %}
+
+<div class="progress-bar" id="progressBar">
+    <div class="progress-bar-fill" id="progressBarFill"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="imageModal">
+    <img id="modalImage" src="" alt="Preview">
+    <div class="controls">
+        <a id="downloadImage" href="#" download>Download</a>
+        <button onclick="closeModal()">Close</button>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById("uploadForm");
+    const progressBar = document.getElementById("progressBar");
+    const progressFill = document.getElementById("progressBarFill");
+    const spinner = document.getElementById("spinner");
+
+    form.addEventListener("submit", function (e) {
+        const files = form.querySelector('input[type="file"]').files;
+        if (files.length > 0) {
+            progressBar.style.display = "block";
+            spinner.style.display = "inline-block";
+            const submitButton = form.querySelector("button[type='submit']");
+            submitButton.disabled = true;
+
+            let uploaded = 0;
+            const interval = setInterval(() => {
+                uploaded += Math.random() * 15;
+                let percent = Math.min(100, uploaded);
+                progressFill.style.width = percent + "%";
+                if (percent >= 100) clearInterval(interval);
+            }, 150);
+        }
+    });
+
+    let currentPage = 1;
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const gallery = document.getElementById('gallery');
+
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function () {
+            currentPage++;
+            fetch(`?page=${currentPage}`, {
+                headers: { 'x-requested-with': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                gallery.insertAdjacentHTML('beforeend', data.html);
+                if (!data.html.trim()) {
+                    loadMoreBtn.disabled = true;
+                    loadMoreBtn.innerText = "No More Images";
+                }
+            });
+        });
+    }
+
+    gallery.addEventListener('click', function (e) {
+        if (e.target.tagName === 'IMG') {
+            const src = e.target.getAttribute('src');
+            const modal = document.getElementById("imageModal");
+            document.getElementById("modalImage").src = src;
+            document.getElementById("downloadImage").href = src;
+            modal.style.display = 'flex';
+        }
+    });
+
+    function closeModal() {
+        document.getElementById("imageModal").style.display = 'none';
+    }
+</script>
+
+</body>
+</html>

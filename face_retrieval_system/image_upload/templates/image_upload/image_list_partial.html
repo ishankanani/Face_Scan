@@ -1,0 +1,13 @@
+{% for image in images %}
+  {% if image.id and image.image %}
+    <div class="img-block">
+      <img src="{{ image.image }}" alt="Uploaded">
+      <form method="post" action="{% url 'delete-image' image.id %}">
+        {% csrf_token %}
+        <button type="submit" class="delete-btn">×</button>
+      </form>
+    </div>
+  {% else %}
+    <!-- Skip invalid images -->
+  {% endif %}
+{% endfor %}
