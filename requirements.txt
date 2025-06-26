@@ -31,7 +31,7 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 mdurl==0.1.2
 ml_dtypes==0.3.2
-mtcnn==1.0.1
+mtcnn==1.0.0
 namex==0.1.0
 numpy==1.26.4
 opencv-python==4.10.0.82
