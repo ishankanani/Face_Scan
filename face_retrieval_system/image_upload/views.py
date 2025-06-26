@@ -14,6 +14,9 @@ from PIL import Image
 from io import BytesIO
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from .face_engine import get_facenet_model
+import logging
+
 
 # --- Compress image before uploading ---
 def compress_image(image_file):
@@ -50,6 +53,8 @@ def extract_faces(img_np):
 # --- Generate normalized embedding from a face image ---
 def extract_normalized_embedding(face_np):
     try:
+        model = get_facenet_model()
+
         result = DeepFace.represent(
             img_path=face_np,
             model_name='Facenet',
