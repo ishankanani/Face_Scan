@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .face_engine import get_facenet_model
 import logging
 
+logger = logging.getLogger(__name__)
 
 # --- Compress image before uploading ---
 def compress_image(image_file):
@@ -54,19 +55,17 @@ def extract_faces(img_np):
 def extract_normalized_embedding(face_np):
     try:
         model = get_facenet_model()
-
         result = DeepFace.represent(
             img_path=face_np,
             model_name='Facenet',
+            model=model,
             enforce_detection=False
         )
         embedding = np.array(result[0]['embedding'])
-        norm_embedding = embedding / np.linalg.norm(embedding)
-        return norm_embedding.tolist()
-    except Exception as e:
-        print("Embedding extraction error:", e)
+        return (embedding / np.linalg.norm(embedding)).tolist()
+    except Exception:
+        logger.exception("Embedding extraction failed.")
         return None
-
 # --- Upload multiple images, extract multiple embeddings ---
 def upload_image(request):
     if request.method == 'POST' and request.FILES.getlist('images'):
